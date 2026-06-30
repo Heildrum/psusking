@@ -5,12 +5,14 @@ if (!isset($_SESSION['dueno_logeado'])) {
     exit;
 }
 require_once __DIR__ . '/../conexion.php';
+require_once __DIR__ . '/../csrf_helper.php';
 
 $mensaje = '';
 
 $credenciales = $pdo->query("SELECT * FROM Pasarela ORDER BY id DESC LIMIT 1")->fetch();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['guardar'])) {
+    csrf_validar();
     $client_id = trim($_POST['client_id']);
     $client_secret = trim($_POST['client_secret']);
     $access_token = trim($_POST['access_token']);
@@ -75,6 +77,7 @@ $pagos = $pdo->query("SELECT p.*, ped.nombre_cliente, ped.total as pedido_total 
         <div class="card">
             <h3>🔑 Credenciales de Mercado Libre / Mercado Pago</h3>
             <form method="POST">
+                <?php echo csrf_campo(); ?>
                 <div class="grupo">
                     <label>Client ID</label>
                     <input type="text" name="client_id" value="<?php echo htmlspecialchars($credenciales['client_id'] ?? ''); ?>">

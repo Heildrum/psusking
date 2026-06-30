@@ -1,28 +1,32 @@
 <?php
-// Configuración de la base de datos
-// Cuando estés en tu computadora local con XAMPP, usa estos valores:
-$host    = 'localhost';
-$db      = 'tienda_perfumes';
-$user    = 'root';
-$password = ''; // En XAMPP suele estar vacío. En Hostinger pondrás la contraseña que crees.
-$charset  = 'utf8mb4';
+$env_file = __DIR__ . '/../../Psusking.env';
+if (file_exists($env_file)) {
+    $lineas = file($env_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lineas as $linea) {
+        if (strpos(trim($linea), '#') === 0) continue;
+        list($key, $val) = explode('=', $linea, 2) + [null, null];
+        if ($key && $val !== null) {
+            $GLOBALS[trim($key)] = trim($val);
+        }
+    }
+}
 
-// Cuando subas el proyecto a Hostinger, solo debes cambiar los valores de arriba 
-// por los que te entregue el panel (ej: $host = 'mysql.hostinger.cl', etc.)
+$host    = $GLOBALS['DB_HOST'] ?? 'localhost';
+$db      = $GLOBALS['DB_NAME'] ?? 'tienda_perfumes';
+$user    = $GLOBALS['DB_USER'] ?? 'root';
+$password = $GLOBALS['DB_PASS'] ?? '';
+$charset = $GLOBALS['DB_CHARSET'] ?? 'utf8mb4';
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 
-// Opciones de configuración de PDO para mayor seguridad y control de errores
 $options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, // Activa el reporte de errores graves
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,       // Devuelve los datos en arreglos limpios
-    PDO::ATTR_EMULATE_PREPARES   => false,                  // Usa consultas preparadas reales (Seguridad)
+    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    PDO::ATTR_EMULATE_PREPARES   => false,
 ];
 
 try {
-    // Intentamos establecer la conexión con MySQL
     $pdo = new PDO($dsn, $user, $password, $options);
 } catch (\PDOException $e) {
-    // Si algo sale mal (ej: contraseña incorrecta), detiene la página y muestra el error
-    die("Error crítico de conexión a la base de datos: " . $e->getMessage());
+    die("Error crítico de conexión a la base de datos.");
 }

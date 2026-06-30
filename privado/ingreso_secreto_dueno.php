@@ -1,27 +1,40 @@
 <?php
 session_start();
 require_once __DIR__ . '/../conexion.php';
+require_once __DIR__ . '/../csrf_helper.php';
+
+$max_intentos = 5;
+$ventana_minutos = 15;
+$ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM login_attempts WHERE ip_address = ? AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)");
+$stmt->execute([$ip, $ventana_minutos]);
+$intentos_recientes = $stmt->fetchColumn();
+
+$bloqueado = $intentos_recientes >= $max_intentos;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_validar();
     $usuario = trim($_POST['usuario']);
     $password = trim($_POST['password']);
 
-    if (!empty($usuario) && !empty($password)) {
-        // Buscamos al administrador en la base de datos usando PDO
+    if ($bloqueado) {
+        $error = "Demasiados intentos. Espera $ventana_minutos minutos.";
+    } elseif (!empty($usuario) && !empty($password)) {
         $stmt = $pdo->prepare("SELECT id, password_hash, secreto_2fa FROM administradores WHERE usuario = ?");
         $stmt->execute([$usuario]);
         $admin = $stmt->fetch();
 
-        // Verificamos si existe y si la contraseña coincide con el hash guardado
         if ($admin && password_verify($password, $admin['password_hash'])) {
-            // Guardamos en la sesión que pasó el primer paso de autenticación
+            $pdo->prepare("DELETE FROM login_attempts WHERE ip_address = ?")->execute([$ip]);
+            session_regenerate_id(true);
             $_SESSION['auth_paso1'] = $admin['id'];
             $_SESSION['auth_secreto_temp'] = $admin['secreto_2fa'];
-            
-            // Redirigimos al segundo paso en el teléfono
             header("Location: verificar_telefono.php");
             exit;
         } else {
+            $stmt = $pdo->prepare("INSERT INTO login_attempts (ip_address, username) VALUES (?, ?)");
+            $stmt->execute([$ip, $usuario]);
             $error = "Credenciales de acceso no válidas.";
         }
     }
@@ -48,11 +61,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if (isset($error)): ?>
             <p class="error"><?php echo $error; ?></p>
         <?php endif; ?>
+        <?php if ($bloqueado): ?>
+            <p class="error" style="margin-top:10px;">⏳ Cuenta temporalmente bloqueada. Intenta más tarde.</p>
+        <?php else: ?>
         <form method="POST" action="">
+            <?php echo csrf_campo(); ?>
             <input type="text" name="usuario" placeholder="Usuario Administrador" required autocomplete="off">
             <input type="password" name="password" placeholder="Contraseña" required>
             <button type="submit">Siguiente Paso</button>
         </form>
+        <?php endif; ?>
     </div>
 </body>
 </html>

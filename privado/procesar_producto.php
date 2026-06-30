@@ -7,8 +7,10 @@ if (!isset($_SESSION['dueno_logeado'])) {
 }
 
 require_once __DIR__ . '/../conexion.php';
+require_once __DIR__ . '/../csrf_helper.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_validar();
     $accion      = $_POST['accion'] ?? '';
     $id          = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
     $nombre      = trim($_POST['nombre']);

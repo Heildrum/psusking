@@ -6,6 +6,7 @@ if (!isset($_SESSION['dueno_logeado'])) {
 }
 
 require_once __DIR__ . '/../conexion.php';
+require_once __DIR__ . '/../csrf_helper.php';
 
 $seccion = $_GET['seccion'] ?? 'dashboard';
 ?>

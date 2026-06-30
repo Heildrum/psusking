@@ -1,6 +1,6 @@
 <!-- El atributo enctype="multipart/form-data" es obligatorio para que PHP pueda recibir archivos binarios (.jpg) -->
 <form action="procesar_producto.php" method="POST" enctype="multipart/form-data" class="formulario-producto">
-    
+    <?php echo csrf_campo(); ?>
     <!-- Campos ocultos de control interno -->
     <input type="hidden" name="accion" value="<?php echo $producto_a_editar ? 'editar' : 'crear'; ?>">
     <?php if ($producto_a_editar): ?>

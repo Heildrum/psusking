@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/conexion.php';
+require_once __DIR__ . '/csrf_helper.php';
 
 if (!isset($_SESSION['carrito']) || empty($_SESSION['carrito'])) {
     header("Location: index.php");
@@ -24,6 +25,7 @@ foreach ($_SESSION['carrito'] as $id => $cant) {
 $mensaje = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_validar();
     $nombre = trim($_POST['nombre'] ?? '');
     $correo = trim($_POST['correo'] ?? '');
     $direccion = trim($_POST['direccion'] ?? '');
@@ -112,6 +114,7 @@ if ($exito) {
                     <div class="error"><?php echo $mensaje; ?></div>
                 <?php endif; ?>
                 <form method="POST">
+                    <?php echo csrf_campo(); ?>
                     <div class="grupo">
                         <label for="nombre">Nombre completo *</label>
                         <input type="text" id="nombre" name="nombre" required value="<?php echo htmlspecialchars($_POST['nombre'] ?? ''); ?>">

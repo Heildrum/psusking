@@ -5,17 +5,29 @@ if (!isset($_SESSION['dueno_logeado'])) {
     exit;
 }
 require_once __DIR__ . '/../conexion.php';
+require_once __DIR__ . '/../csrf_helper.php';
 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+$status = 'error';
+
 if ($id) {
-    $stmt = $pdo->prepare("SELECT imagen FROM productos WHERE id = ?");
-    $stmt->execute([$id]);
-    $imagen = $stmt->fetchColumn();
-    if ($imagen && file_exists(__DIR__ . '/imagenes/' . $imagen)) {
-        unlink(__DIR__ . '/imagenes/' . $imagen);
+    try {
+        $stmt = $pdo->prepare("SELECT imagen FROM productos WHERE id = ?");
+        $stmt->execute([$id]);
+        $imagen = $stmt->fetchColumn();
+
+        $stmt = $pdo->prepare("DELETE FROM productos WHERE id = ?");
+        $stmt->execute([$id]);
+
+        if ($imagen && file_exists(__DIR__ . '/imagenes/' . $imagen)) {
+            unlink(__DIR__ . '/imagenes/' . $imagen);
+        }
+
+        $status = 'success';
+    } catch (Exception $e) {
+        $status = 'error';
     }
-    $stmt = $pdo->prepare("DELETE FROM productos WHERE id = ?");
-    $stmt->execute([$id]);
 }
-header("Location: panel_control.php?seccion=productos&status=success");
+
+header("Location: panel_control.php?seccion=productos&status=$status");
 exit;

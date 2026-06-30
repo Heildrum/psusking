@@ -7,100 +7,104 @@ if (!isset($_SESSION['dueno_logeado'])) {
 
 require_once __DIR__ . '/../conexion.php';
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../csrf_helper.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 $errores = [];
 $contador = 0;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['archivo'])) {
-    $archivo = $_FILES['archivo'];
-
-    if ($archivo['error'] !== UPLOAD_ERR_OK) {
-        $errores[] = 'Error al subir el archivo.';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_FILES['archivo']) || $_FILES['archivo']['error'] === UPLOAD_ERR_NO_FILE) {
+        $errores[] = 'No se seleccionó ningún archivo.';
+    } elseif (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'])) {
+        $errores[] = 'Error de seguridad: Recarga la página e intenta de nuevo.';
+    } elseif ($_FILES['archivo']['error'] !== UPLOAD_ERR_OK) {
+        $errores[] = 'Error al subir el archivo. Código: ' . $_FILES['archivo']['error'];
     } else {
+        $archivo = $_FILES['archivo'];
         $ext = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
 
-        try {
-            if ($ext === 'csv') {
-                $reader = IOFactory::createReader('Csv');
-                $reader->setDelimiter(',');
-                $reader->setEnclosure('"');
-                $reader->setSheetIndex(0);
-            } elseif (in_array($ext, ['xlsx', 'xls'])) {
-                $reader = IOFactory::createReader(ucfirst($ext === 'xlsx' ? 'Xlsx' : 'Xls'));
-            } else {
-                throw new Exception('Formato no soportado. Usa CSV, XLSX o XLS.');
-            }
-
-            $spreadsheet = $reader->load($archivo['tmp_name']);
-            $hoja = $spreadsheet->getActiveSheet();
-            $filas = $hoja->toArray();
-
-            if (count($filas) < 2) {
-                throw new Exception('El archivo debe tener al menos 2 filas (encabezados + datos).');
-            }
-
-            $encabezados = array_map('strtolower', $filas[0]);
-
-            $mapa_columnas = [
-                'nombre' => ['nombre', 'name', 'producto', 'perfume'],
-                'descripcion' => ['descripcion', 'descripcion', 'description', 'notas', 'notas olfativas'],
-                'precio' => ['precio', 'price', 'precio venta', 'valor', 'pvp'],
-                'stock' => ['stock', 'cantidad', 'quantity', 'unidades', 'qty', 'existencia', 'existencias'],
-                'imagen' => ['imagen', 'image', 'foto', 'photo', 'url imagen', 'url'],
-            ];
-
-            $columnas_detectadas = [];
-            foreach ($mapa_columnas as $campo => $variantes) {
-                $idx = false;
-                foreach ($variantes as $v) {
-                    $idx = array_search($v, $encabezados);
-                    if ($idx !== false) break;
+            try {
+                if ($ext === 'csv') {
+                    $reader = IOFactory::createReader('Csv');
+                    $reader->setDelimiter(',');
+                    $reader->setEnclosure('"');
+                    $reader->setSheetIndex(0);
+                } elseif (in_array($ext, ['xlsx', 'xls'])) {
+                    $reader = IOFactory::createReader(ucfirst($ext === 'xlsx' ? 'Xlsx' : 'Xls'));
+                } else {
+                    throw new Exception('Formato no soportado. Usa CSV, XLSX o XLS.');
                 }
-                $columnas_detectadas[$campo] = $idx;
-            }
 
-            if ($columnas_detectadas['nombre'] === false || $columnas_detectadas['precio'] === false) {
-                throw new Exception('El archivo debe tener columnas "nombre" y "precio" al menos. Columnas detectadas: ' . implode(', ', $encabezados));
-            }
+                $spreadsheet = $reader->load($archivo['tmp_name']);
+                $hoja = $spreadsheet->getActiveSheet();
+                $filas = $hoja->toArray();
 
-            $stmt = $pdo->prepare("INSERT INTO productos (nombre, descripcion, precio, imagen, stock) VALUES (?, ?, ?, ?, ?)");
-            $carpeta_destino = __DIR__ . '/imagenes/';
+                if (count($filas) < 2) {
+                    throw new Exception('El archivo debe tener al menos 2 filas (encabezados + datos).');
+                }
 
-            for ($i = 1; $i < count($filas); $i++) {
-                $fila = $filas[$i];
-                $nombre = trim($fila[$columnas_detectadas['nombre']] ?? '');
-                if (empty($nombre)) continue;
+                $encabezados = array_map('strtolower', $filas[0]);
 
-                $descripcion = $columnas_detectadas['descripcion'] !== false ? trim($fila[$columnas_detectadas['descripcion']] ?? '') : '';
-                $precio = $columnas_detectadas['precio'] !== false ? floatval(str_replace(['$', '.', ','], ['', '', '.'], $fila[$columnas_detectadas['precio']] ?? 0)) : 0;
-                $stock = $columnas_detectadas['stock'] !== false ? intval($fila[$columnas_detectadas['stock']] ?? 0) : 0;
-                $imagen = '';
+                $mapa_columnas = [
+                    'nombre' => ['nombre', 'name', 'producto', 'perfume'],
+                    'descripcion' => ['descripcion', 'descripcion', 'description', 'notas', 'notas olfativas'],
+                    'precio' => ['precio', 'price', 'precio venta', 'valor', 'pvp'],
+                    'stock' => ['stock', 'cantidad', 'quantity', 'unidades', 'qty', 'existencia', 'existencias'],
+                    'imagen' => ['imagen', 'image', 'foto', 'photo', 'url imagen', 'url'],
+                ];
 
-                if ($columnas_detectadas['imagen'] !== false) {
-                    $url_imagen = trim($fila[$columnas_detectadas['imagen']] ?? '');
-                    if (!empty($url_imagen) && filter_var($url_imagen, FILTER_VALIDATE_URL)) {
-                        $nombre_limpio = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '_', $nombre)));
-                        $ext = 'jpg';
-                        $nombre_img = $nombre_limpio . '_' . uniqid() . '.' . $ext;
-                        $contenido = @file_get_contents($url_imagen);
-                        if ($contenido !== false) {
-                            file_put_contents($carpeta_destino . $nombre_img, $contenido);
-                            $imagen = $nombre_img;
+                $columnas_detectadas = [];
+                foreach ($mapa_columnas as $campo => $variantes) {
+                    $idx = false;
+                    foreach ($variantes as $v) {
+                        $idx = array_search($v, $encabezados);
+                        if ($idx !== false) break;
+                    }
+                    $columnas_detectadas[$campo] = $idx;
+                }
+
+                if ($columnas_detectadas['nombre'] === false || $columnas_detectadas['precio'] === false) {
+                    throw new Exception('El archivo debe tener columnas "nombre" y "precio" al menos. Columnas detectadas: ' . implode(', ', $encabezados));
+                }
+
+                $stmt = $pdo->prepare("INSERT INTO productos (nombre, descripcion, precio, imagen, stock) VALUES (?, ?, ?, ?, ?)");
+                $carpeta_destino = __DIR__ . '/imagenes/';
+
+                for ($i = 1; $i < count($filas); $i++) {
+                    $fila = $filas[$i];
+                    $nombre = trim($fila[$columnas_detectadas['nombre']] ?? '');
+                    if (empty($nombre)) continue;
+
+                    $descripcion = $columnas_detectadas['descripcion'] !== false ? trim($fila[$columnas_detectadas['descripcion']] ?? '') : '';
+                    $precio = $columnas_detectadas['precio'] !== false ? floatval(str_replace(['$', '.', ','], ['', '', '.'], $fila[$columnas_detectadas['precio']] ?? 0)) : 0;
+                    $stock = $columnas_detectadas['stock'] !== false ? intval($fila[$columnas_detectadas['stock']] ?? 0) : 0;
+                    $imagen = '';
+
+                    if ($columnas_detectadas['imagen'] !== false) {
+                        $url_imagen = trim($fila[$columnas_detectadas['imagen']] ?? '');
+                        if (!empty($url_imagen) && filter_var($url_imagen, FILTER_VALIDATE_URL)) {
+                            $nombre_limpio = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '_', $nombre)));
+                            $ext_img = 'jpg';
+                            $nombre_img = $nombre_limpio . '_' . uniqid() . '.' . $ext_img;
+                            $contenido = @file_get_contents($url_imagen);
+                            if ($contenido !== false) {
+                                file_put_contents($carpeta_destino . $nombre_img, $contenido);
+                                $imagen = $nombre_img;
+                            }
                         }
                     }
+
+                    $stmt->execute([$nombre, $descripcion, $precio, $imagen, $stock]);
+                    $contador++;
                 }
 
-                $stmt->execute([$nombre, $descripcion, $precio, $imagen, $stock]);
-                $contador++;
+            } catch (Exception $e) {
+                $errores[] = $e->getMessage();
             }
-
-        } catch (Exception $e) {
-            $errores[] = $e->getMessage();
         }
     }
-}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -157,6 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['archivo'])) {
         <?php endif; ?>
 
         <form method="POST" enctype="multipart/form-data">
+            <?php echo csrf_campo(); ?>
             <input type="file" name="archivo" accept=".csv,.xlsx,.xls" required>
             <button type="submit">Subir e Importar</button>
         </form>

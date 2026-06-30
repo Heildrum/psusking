@@ -1,37 +1,51 @@
 <?php
 session_start();
 
-// Seguridad: Si no ha completado el paso 1, no puede estar aquí
 if (!isset($_SESSION['auth_paso1'])) {
     header("Location: ingreso_secreto_dueno.php");
     exit;
 }
 
-require_once 'GoogleAuthenticator.php';
+require_once __DIR__ . '/../conexion.php';
+require_once __DIR__ . '/GoogleAuthenticator.php';
+require_once __DIR__ . '/../csrf_helper.php';
+
 $ga = new PHPGangsta_GoogleAuthenticator();
 
+$max_intentos = 5;
+$ventana_minutos = 15;
+$ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+$admin_id = $_SESSION['auth_paso1'];
+
+$stmt = $pdo->prepare("SELECT COUNT(*) FROM login_attempts WHERE ip_address = ? AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)");
+$stmt->execute([$ip, $ventana_minutos]);
+$intentos_recientes = $stmt->fetchColumn();
+$bloqueado = $intentos_recientes >= $max_intentos;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $codigo_2fa = trim($_POST['codigo_2fa']);
-    $secreto = $_SESSION['auth_secreto_temp'];
+    csrf_validar();
 
-    // Verifica el código del teléfono. El "2" permite una tolerancia de 2 bloques de 30 segundos 
-    // por si el reloj de tu teléfono tiene una pequeña diferencia horaria con el servidor
-    $es_valido = $ga->verifyCode($secreto, $codigo_2fa, 2);
-
-    if ($es_valido) {
-        // ¡Autenticación completa con éxito!
-        $_SESSION['dueno_logeado'] = true;
-        $_SESSION['dueno_id'] = $_SESSION['auth_paso1'];
-        
-        // Limpiamos las variables temporales del paso anterior
-        unset($_SESSION['auth_paso1']);
-        unset($_SESSION['auth_secreto_temp']);
-        
-        // Redirigimos a tu panel privado de gestión de perfumes
-        header("Location: panel_control.php");
-        exit;
+    if ($bloqueado) {
+        $error = "Demasiados intentos. Espera $ventana_minutos minutos.";
     } else {
-        $error = "El código digital ingresado no es válido o ya expiró.";
+        $codigo_2fa = trim($_POST['codigo_2fa']);
+        $secreto = $_SESSION['auth_secreto_temp'];
+        $es_valido = $ga->verifyCode($secreto, $codigo_2fa, 2);
+
+        if ($es_valido) {
+            $pdo->prepare("DELETE FROM login_attempts WHERE ip_address = ?")->execute([$ip]);
+            session_regenerate_id(true);
+            $_SESSION['dueno_logeado'] = true;
+            $_SESSION['dueno_id'] = $admin_id;
+            unset($_SESSION['auth_paso1']);
+            unset($_SESSION['auth_secreto_temp']);
+            header("Location: panel_control.php");
+            exit;
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO login_attempts (ip_address, username) VALUES (?, ?)");
+            $stmt->execute([$ip, '2fa_user_' . $admin_id]);
+            $error = "El código digital ingresado no es válido o ya expiró.";
+        }
     }
 }
 ?>
@@ -58,10 +72,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if (isset($error)): ?>
             <p class="error"><?php echo $error; ?></p>
         <?php endif; ?>
+        <?php if ($bloqueado): ?>
+            <p class="error" style="margin-top:10px;">⏳ Demasiados códigos inválidos. Espera <?php echo $ventana_minutos; ?> minutos.</p>
+        <?php else: ?>
         <form method="POST" action="">
+            <?php echo csrf_campo(); ?>
             <input type="text" name="codigo_2fa" placeholder="000000" maxlength="6" required autocomplete="off">
             <button type="submit">Verificar y Entrar</button>
         </form>
+        <?php endif; ?>
     </div>
 </body>
 </html>

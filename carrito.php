@@ -27,6 +27,14 @@ if ($accion === 'vaciar') {
     $_SESSION['carrito'] = [];
 }
 
-$referer = $_SERVER['HTTP_REFERER'] ?? 'index.php';
-header("Location: $referer");
+$referer = $_SERVER['HTTP_REFERER'] ?? '';
+$host = $_SERVER['HTTP_HOST'] ?? '';
+if ($referer && $host) {
+    $ref_host = parse_url($referer, PHP_URL_HOST);
+    if ($ref_host === $host) {
+        header("Location: $referer");
+        exit;
+    }
+}
+header("Location: index.php");
 exit;
