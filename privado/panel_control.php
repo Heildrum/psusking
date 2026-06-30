@@ -15,7 +15,7 @@ $seccion = $_GET['seccion'] ?? 'dashboard';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Control - Psusking</title>
+    <title>Panel de Control - Elixir</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f4f4f9; display: flex; min-height: 100vh; }
@@ -44,7 +44,7 @@ $seccion = $_GET['seccion'] ?? 'dashboard';
 </head>
 <body>
     <div class="sidebar">
-        <h2>🐱 Psusking Panel</h2>
+        <h2>🐱 Elixir Panel</h2>
         <a href="?seccion=dashboard" class="<?php echo $seccion === 'dashboard' ? 'active' : ''; ?>">📊 Dashboard</a>
         <a href="?seccion=productos" class="<?php echo $seccion === 'productos' ? 'active' : ''; ?>">🧴 Productos</a>
         <a href="?seccion=pedidos" class="<?php echo $seccion === 'pedidos' ? 'active' : ''; ?>">📦 Pedidos</a>

@@ -64,7 +64,7 @@ $pagos = $pdo->query("SELECT p.*, ped.nombre_cliente, ped.total as pedido_total 
 </head>
 <body>
     <div class="sidebar">
-        <h2>⚙️ Psusking Panel</h2>
+        <h2>⚙️ Elixir Panel</h2>
         <a href="panel_control.php">← Volver al Panel</a>
         <a href="mercadolibre_config.php" style="color:white;background:#34495e;">🔑 Mercado Libre</a>
         <a href="cerrar_sesion.php" style="margin-top:30px;color:#e74c3c;">Cerrar Sesión</a>
