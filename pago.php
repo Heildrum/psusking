@@ -59,6 +59,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .exito-box p { margin: 15px 0; font-size: 16px; color: #666; }
         .exito-box .btn-volver { display: inline-block; background: #27ae60; color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-size: 16px; margin-top: 10px; }
         .info-pedido { text-align: center; color: #666; font-size: 14px; margin-bottom: 20px; }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 22px; }
+            .container { padding: 20px 12px; }
+            .pago-box { padding: 20px 16px; }
+            .pago-box h2 { font-size: 20px; }
+            .total-pedido { font-size: 26px; }
+            .banco-opcion { padding: 12px; gap: 10px; }
+            .banco-info h4 { font-size: 14px; }
+            .banco-info p { font-size: 12px; }
+            .btn-pagar { font-size: 16px; padding: 12px; }
+        }
     </style>
 </head>
 <body>

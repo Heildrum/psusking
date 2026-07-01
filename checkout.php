@@ -93,6 +93,15 @@ if ($exito) {
         .btn-pagar:hover { background: #219653; }
         .btn-volver { display: inline-block; margin-top: 15px; color: #666; text-decoration: none; font-size: 14px; }
         .error { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 22px; }
+            .container { padding: 20px 12px; }
+            .checkout-form { padding: 20px 16px; }
+            .checkout-form h2 { font-size: 20px; }
+            .resumen { padding: 14px; }
+            .resumen-total { font-size: 18px; }
+            .btn-pagar { font-size: 16px; padding: 12px; }
+        }
     </style>
 </head>
 <body>

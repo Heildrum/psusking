@@ -71,6 +71,21 @@ if (!empty($_SESSION['carrito'])) {
         .btn-vaciar { color: #e74c3c; text-decoration: none; font-size: 14px; float: right; margin-top: 5px; }
         .cart-msg { display: none; position: fixed; bottom: 20px; right: 20px; background: #27ae60; color: white; padding: 14px 26px; border-radius: 8px; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 999; animation: fadeInOut 2s; }
         @keyframes fadeInOut { 0%{opacity:0;transform:translateY(10px)} 15%{opacity:1;transform:translateY(0)} 85%{opacity:1} 100%{opacity:0;transform:translateY(-10px)} }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 32px; letter-spacing: 2px; }
+            .header-logo { max-width: 140px; max-height: 140px; }
+            .nav { flex-direction: column; gap: 12px; padding: 12px 16px; }
+            .nav-links { gap: 20px; }
+            .grid { grid-template-columns: 1fr; gap: 16px; }
+            .container { padding: 20px 12px; }
+            .card-img { height: 200px; }
+            .card-body { padding: 14px; }
+            .card-body h3 { font-size: 18px; }
+            .precio { font-size: 20px; }
+            .modal { padding: 20px; width: 95%; max-height: 90vh; }
+            .modal-item { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .cart-msg { left: 10px; right: 10px; bottom: 10px; text-align: center; font-size: 14px; }
+        }
     </style>
 </head>
 <body>

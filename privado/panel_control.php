@@ -40,6 +40,20 @@ $seccion = $_GET['seccion'] ?? 'dashboard';
         .mensaje.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .mensaje.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         img.thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100%; padding: 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+            .sidebar h2 { width: 100%; margin-bottom: 10px; font-size: 16px; }
+            .sidebar a { display: inline-block; padding: 8px 12px; margin-bottom: 0; font-size: 13px; }
+            .main { padding: 16px; }
+            .header h1 { font-size: 20px; }
+            .header { flex-direction: column; gap: 10px; align-items: stretch; text-align: center; }
+            table { font-size: 13px; }
+            th, td { padding: 8px 6px; }
+            img.thumb { width: 40px; height: 40px; }
+            .btn { font-size: 12px; padding: 5px 8px; }
+            [class*="btn-nuevo"] { width: 100%; text-align: center; }
+        }
     </style>
 </head>
 <body>
