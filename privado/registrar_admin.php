@@ -39,17 +39,8 @@ $qr_b64 = (new QRCode($options))->render($otpauth_uri);
 <body>
     <div class="box">
         <h2>✅ Administrador Registrado</h2>
-        <p><strong>Usuario:</strong> <code><?php echo $usuario; ?></code></p>
-        <p><strong>Contraseña:</strong> <code><?php echo $password; ?></code></p>
-        <p><strong>Secreto 2FA:</strong> <code><?php echo $secreto_2fa; ?></code></p>
         <h3>📱 Escanea este QR con Google Authenticator:</h3>
         <img src="<?php echo $qr_b64; ?>" alt="QR Code" class="qr">
-        <p style="color:#666;font-size:14px;">También puedes tocar <strong>+</strong> → <strong>Ingresar clave de configuración</strong>:</p>
-        <table style="background:#f9f9f9;padding:15px;border-radius:8px;margin:10px 0;">
-            <tr><td style="font-weight:bold;padding:5px;">Cuenta:</td><td style="padding:5px;"><code style="font-size:16px;">Psusking (admin)</code></td></tr>
-            <tr><td style="font-weight:bold;padding:5px;">Clave:</td><td style="padding:5px;"><code style="font-size:20px;letter-spacing:2px;"><?php echo $secreto_2fa; ?></code></td></tr>
-            <tr><td style="font-weight:bold;padding:5px;">Tipo:</td><td style="padding:5px;"><code>Basado en tiempo</code></td></tr>
-        </table>
         <p style="margin-top:20px;"><a href="ingreso_secreto_dueno.php" style="background:#2c3e50;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">Ir al Login</a></p>
     </div>
 </body>

@@ -9,6 +9,10 @@ if (!isset($_SESSION['auth_paso1'])) {
 require_once __DIR__ . '/../conexion.php';
 require_once __DIR__ . '/GoogleAuthenticator.php';
 require_once __DIR__ . '/../csrf_helper.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\QROptions;
 
 $ga = new PHPGangsta_GoogleAuthenticator();
 
@@ -21,6 +25,15 @@ $stmt = $pdo->prepare("SELECT COUNT(*) FROM login_attempts WHERE ip_address = ? 
 $stmt->execute([$ip, $ventana_minutos]);
 $intentos_recientes = $stmt->fetchColumn();
 $bloqueado = $intentos_recientes >= $max_intentos;
+
+$qr_b64 = null;
+if (!empty($_SESSION['auth_secreto_temp'])) {
+    $options = new QROptions;
+    $options->outputType = QRCode::OUTPUT_IMAGE_PNG;
+    $options->scale = 8;
+    $otpauth_uri = 'otpauth://totp/Psusking:admin?secret=' . $_SESSION['auth_secreto_temp'] . '&issuer=Psusking';
+    $qr_b64 = (new QRCode($options))->render($otpauth_uri);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_validar();
@@ -69,6 +82,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="auth-box">
         <h3>Verificación de Identidad</h3>
         <p>Abre la aplicación de autenticación en tu teléfono móvil e ingresa el código de seguridad actual de 6 dígitos.</p>
+        <?php if ($qr_b64): ?>
+            <div style="text-align:center;margin:10px 0;">
+                <img src="<?php echo $qr_b64; ?>" alt="QR Code" style="max-width:180px;border:2px solid #ddd;border-radius:8px;">
+                <p style="font-size:12px;color:#999;margin-top:5px;">Escanéalo con Google Authenticator</p>
+            </div>
+        <?php endif; ?>
         <?php if (isset($error)): ?>
             <p class="error"><?php echo $error; ?></p>
         <?php endif; ?>

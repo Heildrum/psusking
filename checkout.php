@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo->beginTransaction();
 
-            $stmt = $pdo->prepare("INSERT INTO pedidos (nombre_cliente, correo_cliente, total, estado_pago) VALUES (?, ?, ?, 'Pendiente')");
+            $stmt = $pdo->prepare("INSERT INTO pedidos (nombre_cliente, correo_cliente, total, estado_pago) VALUES (?, ?, ?, 'Por_Pagar')");
             $stmt->execute([$nombre, $correo, $total]);
             $pedido_id = $pdo->lastInsertId();
 

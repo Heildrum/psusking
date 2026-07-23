@@ -9,6 +9,20 @@ require_once __DIR__ . '/../conexion.php';
 require_once __DIR__ . '/../csrf_helper.php';
 
 $seccion = $_GET['seccion'] ?? 'dashboard';
+
+if ($seccion === 'cuenta_bancaria' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_validar();
+    $stmt = $pdo->prepare("UPDATE cuenta_bancaria SET banco=?, tipo_cuenta=?, numero_cuenta=?, titular=?, rut=? WHERE id=1");
+    $stmt->execute([
+        $_POST['banco'],
+        $_POST['tipo_cuenta'],
+        $_POST['numero_cuenta'],
+        $_POST['titular'],
+        $_POST['rut'],
+    ]);
+    header("Location: ?seccion=cuenta_bancaria&guardado=1");
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -40,6 +54,10 @@ $seccion = $_GET['seccion'] ?? 'dashboard';
         .mensaje.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .mensaje.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         img.thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+        .grupo { margin-bottom: 18px; }
+        .grupo label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 5px; color: #555; }
+        .grupo input { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; box-sizing: border-box; }
+        .grupo input:focus { outline: none; border-color: #0f3460; }
         @media (max-width: 768px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; padding: 14px; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -64,6 +82,7 @@ $seccion = $_GET['seccion'] ?? 'dashboard';
         <a href="?seccion=pedidos" class="<?php echo $seccion === 'pedidos' ? 'active' : ''; ?>">📦 Pedidos</a>
         <a href="?seccion=crear" class="<?php echo $seccion === 'crear' ? 'active' : ''; ?>">➕ Nuevo Producto</a>
         <a href="importar_productos.php">📥 Importar Excel</a>
+        <a href="?seccion=cuenta_bancaria" class="<?php echo $seccion === 'cuenta_bancaria' ? 'active' : ''; ?>">🏦 Cuenta Bancaria</a>
         <a href="mercadolibre_config.php">🔑 Mercado Pago</a>
         <a href="cerrar_sesion.php" style="margin-top:30px; color:#e74c3c;">🚪 Cerrar Sesión</a>
     </div>
@@ -76,6 +95,7 @@ $seccion = $_GET['seccion'] ?? 'dashboard';
                     'pedidos' => 'Pedidos Recibidos',
                     'crear' => 'Nuevo Producto',
                     'editar' => 'Editar Producto',
+                    'cuenta_bancaria' => 'Cuenta Bancaria',
                 ];
                 echo $titulos[$seccion] ?? 'Panel de Control';
             ?></h1>
@@ -148,6 +168,22 @@ $seccion = $_GET['seccion'] ?? 'dashboard';
             </table>
 
         <?php elseif ($seccion === 'pedidos'): ?>
+            <?php
+            if (isset($_GET['aprobar'])) {
+                $token_get = $_GET['csrf'] ?? '';
+                if (empty($token_get) || !hash_equals($_SESSION['csrf_token'] ?? '', $token_get)) {
+                    echo '<div class="mensaje error">Error de seguridad.</div>';
+                } else {
+                $id_aprobar = filter_input(INPUT_GET, 'aprobar', FILTER_VALIDATE_INT);
+                if ($id_aprobar) {
+                    $stmt = $pdo->prepare("UPDATE pedidos SET estado_pago = 'Aprobado', token_pago = ? WHERE id = ? AND estado_pago = 'Pendiente'");
+                    $token = 'CONF_' . bin2hex(random_bytes(8));
+                    $stmt->execute([$token, $id_aprobar]);
+                    echo '<div class="mensaje success">Pedido #'.$id_aprobar.' aprobado.</div>';
+                }
+                }
+            }
+            ?>
             <table>
                 <thead>
                     <tr>
@@ -157,6 +193,7 @@ $seccion = $_GET['seccion'] ?? 'dashboard';
                         <th>Total</th>
                         <th>Estado</th>
                         <th>Fecha</th>
+                        <th>Acción</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -171,6 +208,13 @@ $seccion = $_GET['seccion'] ?? 'dashboard';
                         <td>$<?php echo number_format($ped['total'], 2); ?></td>
                         <td><?php echo $ped['estado_pago']; ?></td>
                         <td><?php echo $ped['fecha']; ?></td>
+                        <td>
+                            <?php if ($ped['estado_pago'] === 'Pendiente'): ?>
+                                <a href="?seccion=pedidos&aprobar=<?php echo $ped['id']; ?>&csrf=<?php echo csrf_generar_token(); ?>" class="btn btn-editar" onclick="return confirm('¿Confirmar pago de pedido #<?php echo $ped['id']; ?>?')">Aprobar</a>
+                            <?php else: ?>
+                                <span style="color:#999;">—</span>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -192,6 +236,45 @@ $seccion = $_GET['seccion'] ?? 'dashboard';
             <?php else: ?>
                 <?php include 'formulario_creacion.php'; ?>
             <?php endif; ?>
+
+        <?php elseif ($seccion === 'cuenta_bancaria'): ?>
+            <?php
+            $cuenta = $pdo->query("SELECT * FROM cuenta_bancaria WHERE id = 1")->fetch();
+            if (isset($_GET['guardado'])): ?>
+                <div class="mensaje success">✅ Cuenta bancaria guardada correctamente.</div>
+            <?php endif; ?>
+            <div style="background:#fff;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.08);padding:30px;max-width:550px;">
+                <h3 style="color:#2c3e50;margin-bottom:5px;font-size:20px;">🏦 Cuenta Bancaria</h3>
+                <p style="color:#888;font-size:14px;margin-bottom:25px;">Estos datos se mostrarán en la pantalla de pago para que los clientes realicen la transferencia.</p>
+                <form method="POST">
+                    <?php echo csrf_campo(); ?>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+                        <div style="grid-column:span 2;">
+                            <label style="display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:5px;">Banco</label>
+                            <input type="text" name="banco" value="<?php echo htmlspecialchars($cuenta['banco']); ?>" required style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:5px;">Tipo de Cuenta</label>
+                            <input type="text" name="tipo_cuenta" value="<?php echo htmlspecialchars($cuenta['tipo_cuenta']); ?>" placeholder="Corriente / RUT" required style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:5px;">Número de Cuenta</label>
+                            <input type="text" name="numero_cuenta" value="<?php echo htmlspecialchars($cuenta['numero_cuenta']); ?>" required style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:5px;">Titular</label>
+                            <input type="text" name="titular" value="<?php echo htmlspecialchars($cuenta['titular']); ?>" required style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                        </div>
+                        <div>
+                            <label style="display:block;font-size:13px;font-weight:600;color:#555;margin-bottom:5px;">RUT</label>
+                            <input type="text" name="rut" value="<?php echo htmlspecialchars($cuenta['rut']); ?>" required style="width:100%;padding:10px 14px;border:1px solid #ddd;border-radius:6px;font-size:14px;box-sizing:border-box;">
+                        </div>
+                    </div>
+                    <button type="submit" name="guardar_cuenta" style="margin-top:20px;background:#0f3460;color:#fff;border:none;padding:12px 30px;border-radius:6px;font-size:15px;cursor:pointer;">Guardar</button>
+                </form>
+                <p style="margin-top:20px;text-align:center;"><a href="?seccion=dashboard" style="color:#888;text-decoration:none;font-size:14px;">← Volver al Dashboard</a></p>
+            </div>
+
         <?php endif; ?>
     </div>
 </body>

@@ -71,5 +71,20 @@ CREATE TABLE `payments` (
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     -- Relación con tu tabla existente (Ajusta 'orders' por el nombre real de tu tabla de pedidos)
-    CONSTRAINT `fk_payments_order_id` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE
+    CONSTRAINT `fk_payments_order_id` FOREIGN KEY (`order_id`) REFERENCES `pedidos` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =============================================================
+-- 7. TABLA: CUENTA_BANCARIA (Datos de la cuenta para transferencias)
+-- =============================================================
+CREATE TABLE IF NOT EXISTS cuenta_bancaria (
+    id INT PRIMARY KEY DEFAULT 1,
+    banco VARCHAR(100) NOT NULL DEFAULT '',
+    tipo_cuenta VARCHAR(50) NOT NULL DEFAULT '',
+    numero_cuenta VARCHAR(50) NOT NULL DEFAULT '',
+    titular VARCHAR(150) NOT NULL DEFAULT '',
+    rut VARCHAR(20) NOT NULL DEFAULT '',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO cuenta_bancaria (id) VALUES (1);
